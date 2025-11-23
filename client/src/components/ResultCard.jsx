@@ -2,19 +2,15 @@ import React, { useEffect, useState } from "react";
 import API from "../lib/api";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
-import { Loader2, FileText, Sparkles, Copy } from "lucide-react";
+import { Loader2, FileText, Sparkles, Copy, Image } from "lucide-react";
 
 export default function ResultCard({ jobId }) {
   const [status, setStatus] = useState(null);
   const [result, setResult] = useState(null);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [textNotified, setTextNotified] = useState(false);
-  const [suggestionNotified, setSuggestionNotified] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    setHasStarted(false);
-    setTextNotified(false);
-    setSuggestionNotified(false);
+    setStarted(false);
     setResult(null);
     setStatus(null);
   }, [jobId]);
@@ -23,9 +19,9 @@ export default function ResultCard({ jobId }) {
     if (!jobId) return;
     let cancelled = false;
 
-    if (!hasStarted) {
+    if (!started) {
       toast.loading("Processing started…", { id: "job" });
-      setHasStarted(true);
+      setStarted(true);
     }
 
     async function poll() {
@@ -33,36 +29,30 @@ export default function ResultCard({ jobId }) {
       try {
         const res = await API.get(`/api/job/${jobId}`);
         const data = res.data;
-        setStatus(data.status);
+        setStatus(data.status || "pending");
 
         if (data.result) {
           setResult(data.result);
-
-          if (data.result.text && !textNotified) {
+          if (data.result.text) {
             toast.success("Text extracted!", { id: "job" });
-            setTextNotified(true);
           }
-
-          if (data.result.suggestionsStatus === "done" && !suggestionNotified) {
+          if (data.result.suggestionsStatus === "done") {
             toast.success("Suggestions ready!", { id: "job" });
-            setSuggestionNotified(true);
           }
         }
 
-        const keepPolling =
-          ["pending", "processing"].includes(data.status) ||
-          data.result?.suggestionsStatus !== "done";
-
-        if (keepPolling) setTimeout(poll, 1200);
-      } catch (e) {
-        toast.error("Something went wrong!", { id: "job" });
+        const keep = ["pending", "processing"].includes(data.status) || data.result?.suggestionsStatus !== "done";
+        if (keep) setTimeout(poll, 1200);
+      } catch (err) {
+        console.error("poll error:", err);
+        toast.error("Something went wrong while polling");
         setStatus("error");
       }
     }
 
     poll();
     return () => { cancelled = true; };
-  }, [jobId]);
+  }, [jobId, started]);
 
   if (!jobId) return null;
 
@@ -72,78 +62,99 @@ export default function ResultCard({ jobId }) {
     return null;
   })();
 
-  // Progress calculation
   const progress = (() => {
-    if (!result) return 30;
-    if (result && result.suggestionsStatus !== "done") return 70;
+    if (!result) return 20;
+    if (result && result.suggestionsStatus !== "done") return 65;
     return 100;
   })();
 
-  // Copy function
-  const copyText = () => {
+  const copyText = async () => {
     if (result?.text) {
-      navigator.clipboard.writeText(result.text);
-      toast.success("Text copied to clipboard!");
+      await navigator.clipboard.writeText(result.text);
+      toast.success("Copied text");
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mt-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-200"
+      transition={{ duration: 0.35 }}
+      className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-100"
     >
-      {/* Progress Bar */}
-      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
-        <div
-          className="h-full bg-black transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
+      {/* header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-md bg-gradient-to-r from-indigo-600 to-pink-500 text-white">
+            <FileText size={18} />
+          </div>
+          <div>
+            <div className="text-lg font-semibold text-gray-800">Analysis</div>
+            <div className="text-xs text-gray-500">Job: <span className="font-mono">{jobId}</span></div>
+          </div>
+        </div>
+
+        <div className="w-40">
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div style={{ width: `${progress}%` }} className="h-full bg-gradient-to-r from-indigo-500 to-rose-500 transition-all" />
+          </div>
+          <div className="text-xs text-right text-gray-500 mt-1">
+            {progress}% 
+          </div>
+        </div>
       </div>
 
-      {loadingText && (
-        <div className="flex items-center gap-2 mb-5 text-lg font-semibold text-gray-700">
-          <Loader2 className="animate-spin" size={20} /> {loadingText}
-        </div>
-      )}
-
-      {result && (
-        <div className="space-y-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2 text-gray-800 font-semibold text-lg">
-              <FileText size={20} /> Extracted Text
-            </div>
-            <div className="bg-gray-100 p-4 rounded-xl max-h-64 overflow-y-auto font-mono text-sm whitespace-pre-wrap">
-              {result.text || "No text found."}
-            </div>
-            <button
-              onClick={copyText}
-              className="mt-2 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg hover:bg-black transition"
-            >
-              <Copy size={14} className="inline mr-1" /> Copy Text
-            </button>
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={16} /> <h4 className="font-medium text-gray-800">Extracted Text</h4>
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-3 text-gray-800 font-semibold text-lg">
-              <Sparkles size={20} /> Suggestions
-            </div>
+          <div className="bg-gray-50 p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto font-mono text-sm whitespace-pre-wrap text-gray-700">
+            {result?.text ? result.text : "No text yet — wait a moment."}
+          </div>
 
-            {result.suggestionsStatus !== "done" ? (
-              <p className="text-gray-600">Generating suggestions...</p>
-            ) : result.suggestions?.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-2 text-gray-700">
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={copyText}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-gray-900 text-white text-sm hover:scale-[1.02] transition-transform"
+            >
+              <Copy size={14} /> Copy
+            </button>
+            <div className="text-xs text-gray-500">Status: <span className="font-medium text-gray-700">{status}</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={16} /> <h4 className="font-medium text-gray-800">Suggestions</h4>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto text-gray-700">
+            {result?.suggestionsStatus !== "done" ? (
+              <div className="flex items-center gap-3">
+                <Loader2 className="animate-spin" /> <div>Generating suggestions…</div>
+              </div>
+            ) : result?.suggestions?.length ? (
+              <ul className="list-disc ml-5 space-y-2">
                 {result.suggestions.map((s, i) => (
                   <li key={i}>{s}</li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-600">No suggestions generated.</p>
+              <div className="text-gray-500">No suggestions generated.</div>
             )}
           </div>
+
+          {/* optional image preview (if backend returns an image url) */}
+          {result?.imageUrl && (
+            <div className="mt-4 border rounded-lg overflow-hidden">
+              < img src={result.imageUrl} alt="preview" className="w-full h-40 object-contain bg-gray-50" />
+              <div className="p-2 text-xs text-gray-500">Preview</div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </motion.div>
   );
 }
