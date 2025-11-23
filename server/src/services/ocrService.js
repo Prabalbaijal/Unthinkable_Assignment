@@ -3,7 +3,7 @@ const pdf = require('pdf-parse');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
-const pdfPoppler = require('pdf-poppler'); 
+const pdfPoppler = require('pdf-poppler'); // Correct usage
 
 // Convert PDF pages to images
 async function pdfToImages(filePath) {
