@@ -9,4 +9,4 @@
     logger.info(`Server listening on ${PORT}`);
   });
 
-  
+  startWorkers();
