@@ -18,7 +18,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install npm deps
-RUN npm install --legacy-peer-deps
+RUN npm install
 
 # Copy app source
 COPY . .
