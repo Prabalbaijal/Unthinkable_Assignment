@@ -1,17 +1,24 @@
-# Use official Node.js image
-FROM node:22
+# Use Ubuntu so apt works reliably on Render
+FROM ubuntu:22.04
 
-# Install Poppler (for pdf-poppler)
-RUN apt-get update && apt-get install -y poppler-utils
+# Prevent tzdata asking questions
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Set working directory
+# Update & install dependencies
+RUN apt-get update && \
+    apt-get install -y wget curl git poppler-utils && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean
+
+# Workdir
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install npm deps
+RUN npm install --legacy-peer-deps
 
 # Copy app source
 COPY . .
@@ -19,5 +26,5 @@ COPY . .
 # Expose port
 EXPOSE 3000
 
-# Start the app
+# Start server
 CMD ["node", "src/index.js"]

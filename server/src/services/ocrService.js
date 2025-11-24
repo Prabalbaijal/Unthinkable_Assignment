@@ -1,38 +1,74 @@
-const fs = require('fs');
-const pdf = require('pdf-parse');
-const path = require('path');
-const axios = require('axios');
-const FormData = require('form-data');
+const fs = require("fs");
+const path = require("path");
+const pdfParse = require("pdf-parse");
+const { recognize } = require("tesseract.js");
+const poppler = require("pdf-poppler");
+
+async function pdfToImages(filePath) {
+  const outputDir = path.join(__dirname, "../../tmp_pdf_images");
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  const opts = {
+    format: "jpeg",
+    out_dir: outputDir,
+    out_prefix: path.basename(filePath, path.extname(filePath)),
+    page: null,
+  };
+
+  await poppler.convert(filePath, opts);
+
+  const images = fs
+    .readdirSync(outputDir)
+    .filter(f => f.startsWith(opts.out_prefix) && f.endsWith(".jpg"))
+    .map(f => path.join(outputDir, f));
+
+  return images;
+}
+
+async function ocrImage(imagePath) {
+  const result = await recognize(imagePath, "eng");
+  return result.data.text.trim();
+}
 
 async function doOCR(filePath, mime) {
-  console.log('doOCR called for:', filePath);
+  console.log("doOCR called:", filePath);
 
   try {
-    if (mime === 'application/pdf' || filePath.endsWith('.pdf')) {
-      console.log('Processing PDF...');
+    // ======= PDF =======
+    if (mime === "application/pdf" || filePath.endsWith(".pdf")) {
+      console.log("➡ Trying to extract selectable text...");
+
       const data = fs.readFileSync(filePath);
-      const parsed = await pdf(data);
-      console.log('PDF OCR done');
-      return parsed.text || '';
+      const parsed = await pdfParse(data);
+
+      if (parsed.text && parsed.text.trim().length > 5) {
+        console.log(" Selectable text found!");
+        return parsed.text.trim();
+      }
+
+      console.log("No selectable text → converting to images…");
+
+      const images = await pdfToImages(filePath);
+      console.log("Generated images:", images);
+
+      let finalText = "";
+
+      for (const img of images) {
+        console.log("OCR on:", img);
+        const txt = await ocrImage(img);
+        finalText += txt + "\n";
+      }
+
+      return finalText.trim();
     }
 
-    // IMAGE → Cloud OCR API (ocr.space)
-    console.log('Processing Image via OCR API...');
-    const form = new FormData();
-    form.append('file', fs.createReadStream(filePath));
-    form.append('language', 'eng');
-    form.append('OCREngine', '2');
-
-    const res = await axios.post('https://api.ocr.space/parse/image', form, {
-      headers: { apikey: process.env.OCR_SPACE_KEY, ...form.getHeaders() }
-    });
-
-    const text = res.data.ParsedResults?.[0]?.ParsedText || '';
-    console.log('Image OCR done');
-    return text;
+    // ======= IMAGE =======
+    console.log("➡ OCR on normal image...");
+    const result = await recognize(filePath, "eng");
+    return result.data.text.trim();
 
   } catch (err) {
-    console.error('doOCR error:', err);
+    console.error("OCR ERROR:", err);
     throw err;
   }
 }
