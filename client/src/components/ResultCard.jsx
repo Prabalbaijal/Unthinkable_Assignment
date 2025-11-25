@@ -72,7 +72,13 @@ export default function ResultCard({ jobId }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-gray-700 text-gray-200"
+      className="
+        bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-gray-700 text-gray-200
+        transition-all duration-300
+        hover:shadow-[0_0_25px_rgba(120,120,255,0.25)]
+        hover:border-indigo-500/40
+        hover:-translate-y-1
+      "
     >
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -99,6 +105,7 @@ export default function ResultCard({ jobId }) {
 
       {/* Content */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* Extracted Text */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -106,13 +113,25 @@ export default function ResultCard({ jobId }) {
             <h4 className="font-medium text-white">Extracted Text</h4>
           </div>
 
-          <div className="bg-gray-900/60 p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto font-mono text-sm text-gray-300 whitespace-pre-wrap scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-800">
+          <div
+            className="
+              bg-gray-900/60 p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto 
+              font-mono text-sm text-gray-300 whitespace-pre-wrap 
+              scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-800
+              transition-all duration-300
+              hover:bg-gray-900/80 hover:border-gray-600 hover:shadow-inner hover:shadow-indigo-500/20
+            "
+          >
             {result?.text || "Processing…"}
           </div>
 
           <button
             onClick={copyText}
-            className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-md bg-gray-700 text-white text-sm hover:bg-gray-600"
+            className="
+              mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-md bg-gray-700 text-white text-sm 
+              transition-all duration-300
+              hover:bg-indigo-600 hover:text-white hover:scale-[1.04] hover:shadow-lg
+            "
           >
             <Copy size={14} /> Copy
           </button>
@@ -125,7 +144,14 @@ export default function ResultCard({ jobId }) {
             <h4 className="font-medium text-white">Suggestions</h4>
           </div>
 
-          <div className="bg-gray-900/60 p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto text-gray-300 scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-800">
+          <div
+            className="
+              bg-gray-900/60 p-4 rounded-xl min-h-[120px] max-h-56 overflow-y-auto 
+              text-gray-300 scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-800
+              transition-all duration-300
+              hover:bg-gray-900/80 hover:shadow-[0_0_18px_rgba(150,150,255,0.15)]
+            "
+          >
             {result?.suggestionsStatus !== "done" ? (
               <div className="flex items-center gap-3">
                 <Loader2 className="animate-spin" /> Generating…
@@ -133,7 +159,15 @@ export default function ResultCard({ jobId }) {
             ) : result?.suggestions?.length ? (
               <div className="space-y-3">
                 {result.suggestions.map((s, i) => (
-                  <div key={i} className="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                  <div
+                    key={i}
+                    className="
+                      bg-gray-800/50 p-3 rounded-lg border border-gray-700
+                      transition-all duration-300
+                      hover:bg-gray-800 hover:border-indigo-500/60 
+                      hover:translate-x-1 hover:shadow-[0_0_15px_rgba(120,120,255,0.2)]
+                    "
+                  >
                     <h5 className="text-indigo-300 font-semibold">
                       {i + 1}. {s.title || `Suggestion ${i + 1}`}
                     </h5>
